@@ -1,7 +1,7 @@
 "use client";
 
 import { ExtendedPost } from "@/types/db";
-import { FC, useRef } from "react";
+import { FC, useEffect, useRef } from "react";
 import { useIntersection } from "@mantine/hooks";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { INFINITE_SCROLL } from "@/app/cons";
@@ -28,7 +28,9 @@ const PostFeed: FC<PostFeedProps> = ({ initialPosts, subbredditName }) => {
     ["infinite-query"],
     async ({ pageParam = 1 }) => {
       const query = `/api/posts?limit=${INFINITE_SCROLL}&page=${pageParam}${
-        !!subbredditName ? "&subreddit=" + subbredditName : ""
+        !!subbredditName
+          ? "&subredditName=" + encodeURIComponent(subbredditName)
+          : ""
       } `;
 
       const { data } = await axios.get(query);
@@ -45,6 +47,12 @@ const PostFeed: FC<PostFeedProps> = ({ initialPosts, subbredditName }) => {
       },
     }
   );
+
+  useEffect(() => {
+    if (entry?.isIntersecting) {
+      fetchNextPage();
+    }
+  }, [entry, fetchNextPage]);
 
   const posts = data?.pages.flatMap((page) => page) ?? initialPosts;
 
@@ -66,6 +74,8 @@ const PostFeed: FC<PostFeedProps> = ({ initialPosts, subbredditName }) => {
           return (
             <li key={post.id} ref={ref}>
               <Post
+                currentVote={currentVote}
+                votesAmt={votesAmt}
                 commentAmt={post.comments.length}
                 post={post}
                 subredditName={post.subreddit.name}
@@ -75,6 +85,9 @@ const PostFeed: FC<PostFeedProps> = ({ initialPosts, subbredditName }) => {
         } else {
           return (
             <Post
+              key={post.id}
+              currentVote={currentVote}
+              votesAmt={votesAmt}
               commentAmt={post.comments.length}
               post={post}
               subredditName={post.subreddit.name}
